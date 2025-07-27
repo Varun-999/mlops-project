@@ -1,0 +1,46 @@
+# Python
+# ------
+# Ignore Python cache files and compiled files
+__pycache__/
+*.pyc
+
+# Ignore virtual environment folders
+venv/
+env/
+.env
+*.env
+
+
+# Data
+# ----
+# Ignore the raw data directory. This is typically too large for Git.
+# Replace 'data/' with the actual path from your config.py if it's different.
+data/
+
+
+# Generated Artifacts
+# -------------------
+# Ignore model files, encoders, and scalers saved locally.
+# These are tracked by MLflow and should not be in Git.
+*.joblib
+*.h5
+*.keras
+
+
+# MLflow
+# ------
+# Ignore the local MLflow tracking directory
+mlruns/
+
+
+# IDE and OS specific
+# -------------------
+# Ignore common IDE settings folders
+.vscode/
+.idea/
+
+# Ignore macOS system files
+.DS_Store
+
+# Ignore Windows system files
+Thumbs.db
