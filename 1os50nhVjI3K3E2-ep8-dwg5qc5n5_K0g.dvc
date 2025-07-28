@@ -1,0 +1,11 @@
+md5: d859a00f68ad02a2b6e696478ff0f4b9
+frozen: true
+deps:
+- checksum: '256462888231503362045703160952850722864'
+  size: 0
+  hash: md5
+  path: 
+    https://drive.google.com/drive/folders/1os50nhVjI3K3E2-ep8-dwg5qc5n5_K0g?usp=sharing
+outs:
+- hash: md5
+  path: 1os50nhVjI3K3E2-ep8-dwg5qc5n5_K0g
