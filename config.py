@@ -19,8 +19,19 @@ from pathlib import Path
 # DATA_DIR = PROJECT_ROOT / "urbansound8k"
 # METADATA_PATH = DATA_DIR / "UrbanSound8K.csv"
 #The reason i' defining path directly is because the above path code with automatically fetch the path of the data if the data is present in the same directory as the code files, but in my case as there is no storage in my drive i can't copy the dataset again in this path (lack of storage- long story short)
-DATA_DIR =r"C:/Users/home/urbnmlops/urbnmlops/urbansound8k"
-METADATA_PATH = r"C:/Users/home/urbnmlops/urbnmlops/urbansound8k/UrbanSound8K.csv"
+# DATA_DIR =r"C:/Users/home/urbnmlops/urbnmlops/urbansound8k"
+# METADATA_PATH = r"C:/Users/home/urbnmlops/urbnmlops/urbansound8k/UrbanSound8K.csv"
+# DATA_DIR =r"E:/urban soundscape project/urbansound8k"
+# METADATA_PATH = r"E:/urban soundscape project/urbansound8k/UrbanSound8K.csv"
+# Old (absolute Windows path):
+# DATA_DIR = r'C:/users/home/urbnmlops/urbnmlops/urbansound8k/'
+# METADATA_PATH = r'C:/users/home/urbnmlops/urbnmlops/urbansound8k/UrbanSound8K.csv'
+
+# New (Docker volume path):
+DATA_DIR = '/dataset/'
+METADATA_PATH = '/dataset/UrbanSound8K.csv'
+
+
 
 
 # --- Model & Feature Parameters ---

@@ -1,0 +1,46 @@
+
+# Note: The 'version' attribute is obsolete and has been removed.
+
+
+services:
+  mlflow-server:
+    # --- THIS IS THE FIX ---
+    # Updated to a newer, compatible version of MLflow
+    image: ghcr.io/mlflow/mlflow:v2.14.2
+    container_name: mlflow_server
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/mlruns
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri sqlite:////mlruns/mlflow.db
+      --default-artifact-root file:///mlruns
+
+  fastapi-app:
+    build: . # This tells Compose to build from the Dockerfile in this directory
+    container_name: my-audio-api
+    ports:
+      - "8000:8000"
+    environment:
+      # This tells our app how to find the MLflow server
+      - MLFLOW_TRACKING_URI=http://mlflow-server:5000
+    volumes:
+      - ./mlruns:/mlruns
+    depends_on:
+      - mlflow-server
+    
+    
+  train-job:
+      build: .
+      entrypoint: ["python", "train.py"]
+      volumes:
+          - ./mlruns:/mlruns
+          - .:/app   # This ensures your code/data is available inside the container
+          - /c/users/home/urbnmlops/urbnmlops/urbansound8k:/dataset  # Add this line (WSL/Docker Desktop/Linux path style)
+      environment:
+          - MLFLOW_TRACKING_URI=http://mlflow-server:5000
+      depends_on:
+          - mlflow-server

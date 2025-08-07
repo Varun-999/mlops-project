@@ -12,7 +12,7 @@ def build_model(input_shape, num_classes):
         BatchNormalization(),
         MaxPooling2D((2,2)),
         
-        Conv2D(64, (3,3), activation='relu'),
+        Conv2D(64, (3,3), activation='relu', kernel_regularizer=l2(0.001)),
         BatchNormalization(),
         MaxPooling2D((2,2)),
         
@@ -21,7 +21,7 @@ def build_model(input_shape, num_classes):
         MaxPooling2D((2,2)),
         
         Flatten(),
-        Dense(256, activation='relu'),
+        Dense(256, activation='relu', kernel_regularizer=l2(0.0001)),
         Dropout(0.4),
         
         Dense(num_classes, activation='softmax')

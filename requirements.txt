@@ -1,0 +1,19 @@
+# requirements.txt
+
+# For the web server and file uploads
+fastapi
+uvicorn[standard]
+python-multipart
+
+# For ML and data processing
+numpy
+tensorflow
+# Pin the mlflow version to match the server in docker-compose.yml
+mlflow==2.14.2
+scikit-learn
+resampy
+pandas
+joblib
+librosa
+pydantic
+
