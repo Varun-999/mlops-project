@@ -20,7 +20,9 @@ services:
       --default-artifact-root file:///mlruns
 
   fastapi-app:
-    build: . # This tells Compose to build from the Dockerfile in this directory
+    build:
+        context: ./src
+        dockerfile: Dockerfile # This tells Compose to build from the Dockerfile in this directory
     container_name: my-audio-api
     ports:
       - "8000:8000"
@@ -29,16 +31,19 @@ services:
       - MLFLOW_TRACKING_URI=http://mlflow-server:5000
     volumes:
       - ./mlruns:/mlruns
+      - ./src:/app
     depends_on:
       - mlflow-server
     
     
   train-job:
-      build: .
+      build:
+          context: ./src
+          dockerfile: Dockerfile
       entrypoint: ["python", "train.py"]
       volumes:
           - ./mlruns:/mlruns
-          - .:/app   # This ensures your code/data is available inside the container
+          - ./src:/app   # This ensures your code/data is available inside the container
           - /c/users/home/urbnmlops/urbnmlops/urbansound8k:/dataset  # Add this line (WSL/Docker Desktop/Linux path style)
       environment:
           - MLFLOW_TRACKING_URI=http://mlflow-server:5000
