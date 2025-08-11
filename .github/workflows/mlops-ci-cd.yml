@@ -1,0 +1,54 @@
+name: MLOps CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test-train-deploy:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install requirements
+        run: pip install -r requirements.txt
+
+      # - name: Run Tests
+      #   run: pytest tests/
+      
+
+      - name: Build Docker images
+        run: docker-compose build
+
+      # (Optional) - Login to Docker Hub (if pushing images)
+      # - name: Login to DockerHub
+      #   uses: docker/login-action@v3
+      #   with:
+      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
+      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # (Optional) - Push images to DockerHub
+      # - name: Push Docker Images
+      #   run: docker-compose push
+
+      # (Optional) - Deploy using SSH or cloud provider
+      # - name: Deploy to Server
+      #   uses: appleboy/ssh-action@v1.0.3
+      #   with:
+      #     host: ${{ secrets.SERVER_IP }}
+      #     username: ${{ secrets.SERVER_USER }}
+      #     key: ${{ secrets.SERVER_SSH_KEY }}
+      #     script: |
+      #       cd /path/to/project
+      #       git pull
+      #       docker-compose pull
+      #       docker-compose up -d --build
