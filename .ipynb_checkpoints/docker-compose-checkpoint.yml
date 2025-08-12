@@ -38,7 +38,7 @@ services:
     
   train-job:
       build:
-          context: ./src
+          context: .
           dockerfile: Dockerfile
       entrypoint: ["python", "train.py"]
       volumes:
