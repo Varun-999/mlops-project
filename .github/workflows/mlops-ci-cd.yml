@@ -13,6 +13,24 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install DVC with Google Drive support
+        run: pip install dvc[gdrive]
+
+      - name: Configure DVC with Google Drive Credentials
+        # This securely places your JSON credentials where DVC can find them
+        run: |
+          echo '${{ secrets.GDRIVE_CREDENTIALS_DATA }}' > gdrive-creds.json
+          export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gdrive-creds.json
+          
+      - name: Pull data from Google Drive
+        # This is the command that downloads your dataset into the runner
+        run: dvc pull -f
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
