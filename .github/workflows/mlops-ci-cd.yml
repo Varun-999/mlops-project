@@ -12,27 +12,73 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Build Docker images
         run: docker compose build
-        working-directory: .
 
-      - name: Start MLflow server
+      - name: Start MLflow server in background
         run: docker compose up -d mlflow-server
-        working-directory: .
+
+      - name: Wait for MLflow server to be healthy
+        # This is the crucial fix for the race condition.
+        # It gives the server time to initialize before the training job tries to connect.
+        # We ping the UI (port 5000 by default) until it responds.
+        run: |
+          echo "Waiting for MLflow server..."
+          while ! curl -s http://localhost:5000; do
+            sleep 1
+          done
+          echo "MLflow server is up!"
 
       - name: Run training job
         run: docker compose run --rm train-job
-        working-directory: .
 
-      - name: Stop containers
+      - name: Stop containers on completion or failure
         if: always()
         run: docker compose down
-        working-directory: .
+
+
+
+
+# name: MLOps CI/CD
+
+# on:
+#   push:
+#     branches: [ main ]
+#   pull_request:
+#     branches: [ main ]
+
+# jobs:
+#   build-and-train:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v3
+
+#       - name: Set up Docker Buildx
+#         uses: docker/setup-buildx-action@v2
+
+#       - name: Build Docker images
+#         run: docker compose build
+#         working-directory: .
+
+#       - name: Start MLflow server
+#         run: docker compose up -d mlflow-server
+#         working-directory: .
+
+#       - name: Run training job
+#         run: docker compose run --rm train-job
+#         working-directory: .
+
+#       - name: Stop containers
+#         if: always()
+#         run: docker compose down
+#         working-directory: .
 
 
 
