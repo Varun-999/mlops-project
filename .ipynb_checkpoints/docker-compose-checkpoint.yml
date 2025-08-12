@@ -21,7 +21,7 @@ services:
 
   fastapi-app:
     build:
-        context: ./src
+        context: .
         dockerfile: Dockerfile # This tells Compose to build from the Dockerfile in this directory
     container_name: my-audio-api
     ports:
