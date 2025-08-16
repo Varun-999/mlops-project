@@ -31,7 +31,9 @@ from pathlib import Path
 DATA_DIR = '/dataset/'
 METADATA_PATH = '/dataset/UrbanSound8K.csv'
 
-
+# # New (Continous integration path):
+# DATA_DIR = 'data/urbansound8k/'
+# METADATA_PATH = 'data/urbansound8k/UrbanSound8K.csv'
 
 
 # --- Model & Feature Parameters ---

@@ -44,7 +44,7 @@ services:
       volumes:
           - ./mlruns:/mlruns
           - ./src:/app   # This ensures your code/data is available inside the container
-          - /c/users/home/urbnmlops/urbnmlops/urbansound8k:/dataset  # Add this line (WSL/Docker Desktop/Linux path style)
+          - /c/users/home/FtoL/data/urbansound8k:/dataset  # Add this line (WSL/Docker Desktop/Linux path style)
       environment:
           - MLFLOW_TRACKING_URI=http://mlflow-server:5000
       depends_on:
