@@ -25,6 +25,11 @@ env/
 *.h5
 *.keras
 
+*.json
+dvc-sound-project-*.json
+dvc-secondary-project-*.json
+
+
 
 # MLflow
 # ------
