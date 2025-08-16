@@ -15,7 +15,6 @@ env/
 # ----
 # Ignore the raw data directory. This is typically too large for Git.
 # Replace 'data/' with the actual path from your config.py if it's different.
-data/
 
 
 # Generated Artifacts
