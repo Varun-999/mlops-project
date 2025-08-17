@@ -30,6 +30,9 @@ dvc-sound-project-*.json
 dvc-secondary-project-*.json
 
 
+gdrive-creds.json
+
+
 
 # MLflow
 # ------
