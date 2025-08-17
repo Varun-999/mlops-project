@@ -31,7 +31,8 @@ dvc-secondary-project-*.json
 
 
 gdrive-creds.json
-
+# Ignore service account key
+.dvc/dvc-secondary-project-cf006599baee.json
 
 
 # MLflow

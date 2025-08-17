@@ -2,6 +2,8 @@
     remote = gdrive_storage
 ['remote "gdrive_storage"']
     url = gdrive://1vWLdLUdYRBXMMXubHBdC0zzjTVmvPaIW
-    gdrive_use_service_account = false
+    gdrive_use_service_account = true
     gdrive_client_id = 205836669252-56fv8c29mf05ohhhpbicekokp5eu5scp.apps.googleusercontent.com
+    gdrive_service_account_json_file_path = .dvc/dvc-secondary-project-cf006599baee.json
+
     

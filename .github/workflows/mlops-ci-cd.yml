@@ -13,24 +13,25 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+        
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      - name: Install DVC with Google Drive support
-        run: pip install dvc[gdrive]
-
-      - name: Write Google Service Account Credentials
+      - name: Install dependencies
         run: |
-          echo "${{ secrets.GDRIVE_SEC_CRED_DATA }}" > gdrive-creds.json
-        shell: bash
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install dvc[gdrive]
 
-      - name: Pull data from Google Drive
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gdrive-creds.json
-        run: dvc pull -f
+      - name: Configure DVC with Google Drive Service Account
+        run: |
+          mkdir -p .dvc
+          echo '${{ secrets.GDRIVE_SEC_CRED_DATA }}' > .dvc/gdrive_service_account.json
+
+      - name: Pull data from Google Drive (DVC)
+        run: dvc pull -v
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -44,7 +45,7 @@ jobs:
       - name: Wait for MLflow server to be healthy
         run: |
           echo "Waiting for MLflow server..."
-          while ! curl -s http://localhost:5000; do
+          until curl -s http://localhost:5000 > /dev/null; do
             sleep 1
           done
           echo "MLflow server is up!"
