@@ -27,8 +27,7 @@ jobs:
 
       - name: Configure DVC with Google Drive Service Account
         run: |
-          mkdir -p .dvc
-          echo '${{ secrets.GDRIVE_SEC_CRED_DATA }}' > .dvc/gdrive_service_account.json
+          echo '${{ secrets.GDRIVE_SEC_CRED_DATA }}' > .dvc/dvc-secondary-project-cf006599baee.json
 
       - name: Pull data from Google Drive (DVC)
         run: dvc pull -v
