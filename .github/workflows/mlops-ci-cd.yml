@@ -27,10 +27,20 @@ jobs:
 
       - name: Configure DVC with Google Drive Service Account
         run: |
-          echo '${{ secrets.GDRIVE_SEC_CRED_DATA }}' > dvc-secondary-project-cf006599baee.json
+          echo '${{ secrets.GDRIVE_SEC_CRED_DATA }}' > .dvc/dvc-secondary-project-cf006599baee.json
+      
+      - name: Verify file location (for debugging)
+        run: |
+          echo "Contents of .dvc/config:"
+          cat .dvc/config
+          echo "---------------------------"
+          echo "Files in the .dvc directory:"
+          ls -la .dvc/
 
       - name: Pull data from Google Drive (DVC)
         run: dvc pull -v
+      # - name: Pull data from Google Drive (DVC)
+        # run: dvc pull -v
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
