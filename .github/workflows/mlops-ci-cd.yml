@@ -38,8 +38,8 @@ jobs:
           ls -la .dvc/
 
       - name: Pull data from Google Drive (DVC)
-        timeout-minutes: 30
-        run: dvc pull -v
+        timeout-minutes: 45
+        run: dvc pull -v --jobs 4
       # - name: Pull data from Google Drive (DVC)
         # run: dvc pull -v
 
