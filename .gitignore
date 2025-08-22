@@ -35,6 +35,8 @@ gdrive-creds.json
 .dvc/dvc-secondary-project-cf006599baee.json
 
 
+
+.gitlab-ci.yml
 # MLflow
 # ------
 # Ignore the local MLflow tracking directory
