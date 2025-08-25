@@ -38,7 +38,7 @@ jobs:
           ls -la .dvc/
 
       - name: Pull data archive from Google Drive (DVC)
-        timeout-minutes: 30
+        timeout-minutes: 60
         run: dvc pull -v
 
       - name: Extract the dataset archive
