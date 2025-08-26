@@ -28,7 +28,7 @@ env/
 *.json
 dvc-sound-project-*.json
 dvc-secondary-project-*.json
-
+########
 
 gdrive-creds.json
 # Ignore service account key
