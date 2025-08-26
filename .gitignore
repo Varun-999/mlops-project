@@ -34,8 +34,8 @@ gdrive-creds.json
 # Ignore service account key
 .dvc/dvc-secondary-project-cf006599baee.json
 
-data/urbansound8k
-urbansound8k
+#data/urbansound8k
+#urbansound8k
 
 .gitlab-ci.yml
 # MLflow
