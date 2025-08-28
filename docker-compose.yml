@@ -43,9 +43,10 @@ services:
       entrypoint: ["python", "train.py"]
       volumes:
           - ./mlruns:/mlruns
-          - ./src:/app   # This ensures your code/data is available inside the container
-          - ./data/urbansound8k:/dataset
-	        #- /c/users/home/FtoL/data/urbansound8k:/dataset  # Add this line (WSL/Docker Desktop/Linux path style)
+          - ./src:/app # This ensures your code/data is available inside the container
+          - ./data/urbansound8k:/dataset   
+          # - /c/users/home/FtoL/data/urbansound8k:/dataset  # Add this line (WSL/Docker Desktop/Linux path style)
+          # - ./data/urbansound8k:/dataset
       environment:
           - MLFLOW_TRACKING_URI=http://mlflow-server:5000
       depends_on:
