@@ -47,8 +47,21 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker images
-        run: docker compose build
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Step 4: Build and tag the Docker image
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true # This tells the action to push after building
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/urbansound-api:latest # Replace with your repo name
+      # - name: Build Docker images
+      #   run: docker compose build
 
       - name: Start MLflow server in background
         run: docker compose up -d mlflow-server
