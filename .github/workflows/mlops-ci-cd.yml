@@ -41,6 +41,7 @@ jobs:
         timeout-minutes: 60
         # This command will pull whichever .dvc files are in the commit.
         # For your test, it will only pull fold1.dvc.
+        #testing
         run: dvc pull -v data/urbansound8k/fold1
         
       - name: Set up Docker Buildx
