@@ -34,8 +34,16 @@ gdrive-creds.json
 # Ignore service account key
 .dvc/dvc-secondary-project-cf006599baee.json
 
-data/urbansound8k/
-urbansound8k/
+data/urbansound8k/fold1
+data/urbansound8k/fold2
+data/urbansound8k/fold3
+data/urbansound8k/fold4
+data/urbansound8k/fold5
+data/urbansound8k/fold6
+data/urbansound8k/fold7
+data/urbansound8k/fold8
+data/urbansound8k/fold9
+data/urbansound8k/fold10
 client_secret_205836669252-lncvjic1vrdgkcat2t2ku28kt74d4sik.apps.googleusercontent.com.json
 
 .gitlab-ci.yml
