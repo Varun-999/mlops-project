@@ -37,11 +37,11 @@ jobs:
           echo "Files in the .dvc directory:"
           ls -la .dvc/
 
-      - name: Pull data from Google Drive (DVC)
+      - name: Pull specific data from Google Drive (DVC)
         timeout-minutes: 60
         # This command will pull whichever .dvc files are in the commit.
         # For your test, it will only pull fold1.dvc.
-        run: dvc pull -v
+        run: dvc pull -v data/urbansound8k/fold1
         
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
