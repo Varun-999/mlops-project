@@ -42,7 +42,7 @@ jobs:
         # This command will pull whichever .dvc files are in the commit.
         # For your test, it will only pull fold1.dvc.
         #testing
-        run: dvc pull -v data/urbansound8k/fold1
+        run: dvc pull -v data/urbansound8k/fold1.dvc
         
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
