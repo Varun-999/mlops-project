@@ -65,7 +65,25 @@ joblib.dump({'mean': mean, 'std': std}, config.NORMALIZATION_STATS_ARTIFACT_NAME
 
 # This is the only block you need for setting the tracking URI and experiment.
 # Delete all other versions.
+#this is for running on docker 
 mlflow.set_tracking_uri("http://mlflow-server:5000")
+#this is for running locally on machine
+# The below code is correct for local execution need to switch whenever using either one
+# import socket
+
+# def is_port_open(host, port):
+#     try:
+#         with socket.create_connection((host, port), timeout=2):
+#             return True
+#     except:
+#         return False
+
+# if is_port_open("127.0.0.1", 5000):
+#     mlflow.set_tracking_uri("http://127.0.0.1:5000")
+# else:
+#     mlflow.set_tracking_uri("file:./mlruns")
+
+
 EXPERIMENT_NAME = "Final-sound-cls-model"
 
 # Check if the experiment exists. If not, create it.

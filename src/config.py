@@ -24,23 +24,23 @@ from pathlib import Path
 # DATA_DIR =r"E:/urban soundscape project/urbansound8k"
 # METADATA_PATH = r"E:/urban soundscape project/urbansound8k/UrbanSound8K.csv"
 # Old (absolute Windows path):
-# DATA_DIR = r'C:/users/home/urbnmlops/urbnmlops/urbansound8k/'
-# METADATA_PATH = r'C:/users/home/urbnmlops/urbnmlops/urbansound8k/UrbanSound8K.csv'
+# DATA_DIR = r'C:/users/home/FtoL/data/urbansound8k/'
+# METADATA_PATH = r'C:/users/home/FtoL/data/urbansound8k/UrbanSound8K.csv'
 
 # New (Docker volume path):
-DATA_DIR = '/dataset/'
-METADATA_PATH = '/dataset/UrbanSound8K.csv'
+# DATA_DIR = '/dataset/'
+# METADATA_PATH = '/dataset/UrbanSound8K.csv'
 
 # # New (Continous integration path):
-# DATA_DIR = 'data/urbansound8k/'
-# METADATA_PATH = 'data/urbansound8k/UrbanSound8K.csv'
+DATA_DIR = 'data/urbansound8k/'
+METADATA_PATH = 'data/urbansound8k/UrbanSound8K.csv'
 
 
 # --- Model & Feature Parameters ---
 SAMPLE_RATE = 22050
 DURATION = 4  # seconds
 N_MFCC = 40
-MAX_TIME_STEPS = 174
+MAX_TIME_STEPS = 175
 
 # --- Training Parameters ---
 EPOCHS = 10 # Example of a training parameter
