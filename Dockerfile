@@ -4,20 +4,24 @@ FROM python:3.11-slim
 # 2. Set the working directory inside the container
 WORKDIR /app
 
-# 3. Copy the requirements file into the container
+# 3. Copy only the requirements file first
 COPY requirements.txt .
 
-# 4. Install the Python dependencies
-# --no-cache-dir makes the image smaller
+# 4. Install Python dependencies with --no-cache-dir
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 5. Copy your application code into the container
-# This includes main.py, config.py, data_processing.py, etc.
-COPY . .
+# 5. Copy only the essential artifacts
+COPY ./artifacts/label_encoder.joblib /app/artifacts/
+COPY ./artifacts/normalization_stats.joblib /app/artifacts/
+COPY ./artifacts/model/model.keras /app/artifacts/
 
-# 6. Expose the port the app runs on
+# 6. Copy only the necessary application code
+COPY src/main.py .
+COPY src/config.py .
+COPY src/data_processing.py .
+
+# 7. Expose the port the app runs on
 EXPOSE 8000
 
-# 7. Define the command to run your app when the container starts
-# We use 0.0.0.0 to make it accessible from outside the container.
+# 8. Define the command to run your app
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,0 +1,27 @@
+# Ignore Git and DVC files
+.git/
+.gitignore
+.dvc/
+.dvcignore
+# Ignore virtual environment folders
+venv/
+env/
+.gitlab-ci.yml
+# Ignore data folders
+data/
+# Ignore MLflow tracking directory
+mlruns/
+# Ignore IDE and OS-specific files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+# Ignore artifacts except the ones explicitly copied in Dockerfile
+artifacts/*
+!artifacts/label_encoder.joblib
+!artifacts/normalization_stats.joblib
+!artifacts/model/model.keras
+# Ignore logs and temporary files
+__pycache__/
+*.pyc
+*.log

@@ -5,8 +5,9 @@ import joblib
 import numpy as np
 import librosa # You'll need this for audio processing
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from pantic import BaseModel
+from pydantic import BaseModel
 # --- CHANGE 1: Import the Keras load_model function ---
+import tensorflow as tf
 from tensorflow.keras.models import load_model
 
 # --- CHANGE 2: MLflow imports are no longer needed ---
@@ -51,12 +52,14 @@ def load_artifacts():
         # Define the paths to the artifacts inside the container
         # These paths correspond to the `COPY ./artifacts /app/artifacts` command in your Dockerfile
         artifacts_dir = "./artifacts"
-        model_path = os.path.join(artifacts_dir, "model") # Path to the saved model folder
+        model_path = os.path.join(artifacts_dir, "model","model.keras") # Path to the saved model folder
         le_path = os.path.join(artifacts_dir, "label_encoder.joblib")
         stats_path = os.path.join(artifacts_dir, "normalization_stats.joblib")
 
         # Load the artifacts
-        ml_model = load_model(model_path)
+        # ml_model = load_model(model_path)
+        # Load the artifacts
+        ml_model = tf.keras.models.load_model(model_path)   # keras model
         label_encoder = joblib.load(le_path)
         norm_stats = joblib.load(stats_path)
 
