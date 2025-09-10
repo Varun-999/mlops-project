@@ -1,13 +1,13 @@
 #v3
 import os
 import io
+import tensorflow as tf
 import joblib
 import numpy as np
 import librosa # You'll need this for audio processing
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from pydantic import BaseModel
 # --- CHANGE 1: Import the Keras load_model function ---
-import tensorflow as tf
 from tensorflow.keras.models import load_model
 
 # --- CHANGE 2: MLflow imports are no longer needed ---
