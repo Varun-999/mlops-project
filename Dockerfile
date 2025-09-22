@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 5. Copy only the essential artifacts
 COPY ./artifacts/label_encoder.joblib /app/artifacts/
 COPY ./artifacts/normalization_stats.joblib /app/artifacts/
-COPY ./artifacts/model/model.keras /app/artifacts/
+COPY ./artifacts/model.keras /app/artifacts/
 
 # 6. Copy only the necessary application code
 COPY src/main.py .

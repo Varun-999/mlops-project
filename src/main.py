@@ -1,14 +1,14 @@
 #v3
 import os
 import io
-import tensorflow as tf
+import tensorflow
 import joblib
 import numpy as np
 import librosa # You'll need this for audio processing
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from pydantic import BaseModel
 # --- CHANGE 1: Import the Keras load_model function ---
-from tensorflow.keras.models import load_model
+import tensorflow as tf
 
 # --- CHANGE 2: MLflow imports are no longer needed ---
 # from mlflow.tracking import MlflowClient
@@ -45,14 +45,15 @@ def load_artifacts():
     Loads the production model and preprocessing artifacts from the local '/app/artifacts'
     directory inside the container.
     """
-    global ml_model, label_encoder, norm_stats
+    global tf, ml_model, label_encoder, norm_stats
     print("Loading model and artifacts from local directory...")
 
     try:
         # Define the paths to the artifacts inside the container
         # These paths correspond to the `COPY ./artifacts /app/artifacts` command in your Dockerfile
         artifacts_dir = "./artifacts"
-        model_path = os.path.join(artifacts_dir, "model","model.keras") # Path to the saved model folder
+        # model_path = os.path.join(artifacts_dir, "model","model.keras") # Path to the saved model folder
+        model_path = os.path.join(artifacts_dir,"model.keras")
         le_path = os.path.join(artifacts_dir, "label_encoder.joblib")
         stats_path = os.path.join(artifacts_dir, "normalization_stats.joblib")
 
@@ -119,7 +120,7 @@ async def predict(file: UploadFile = File(...)):
 
 
 
-#v2
+# # v2 working locally
 # import os
 # import io
 # import joblib
