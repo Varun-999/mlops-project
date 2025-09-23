@@ -1,116 +1,501 @@
-#v3
 import os
 import io
-import tensorflow
+import tensorflow as tf
 import joblib
 import numpy as np
-import librosa # You'll need this for audio processing
+import librosa
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-# --- CHANGE 1: Import the Keras load_model function ---
-import tensorflow as tf
+import logging
 
-# --- CHANGE 2: MLflow imports are no longer needed ---
-# from mlflow.tracking import MlflowClient
-# from mlflow.exceptions import MlflowException
-# import mlflow
-
-# --- Custom Module Imports ---
-# This remains the same
+# Import custom modules
 import config
 import data_processing
 
-# --- Configuration ---
-# These are no longer needed as we load directly from a local folder
-# REGISTERED_MODEL_NAME = "AudioClassifier"
-# MODEL_ALIAS = "Production"
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# --- 1. Define Application and Global Variables ---
-app = FastAPI(title="Audio Classification API")
+# FastAPI app instance
+app = FastAPI(
+    title="Urban Sound Classification API",
+    description="Audio classification API for Urban Sound dataset",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Global variables
 ml_model = None
 label_encoder = None
 norm_stats = None
 
-# --- 2. Define Request/Response Models ---
-# This remains the same
+# Response models
 class PredictionResponse(BaseModel):
     predicted_class: str
 
-# --- 3. Implement a Startup Event to Load the Model ---
-# This entire function is replaced to load artifacts locally.
-@app.on_event("startup")
-def load_artifacts():
-    """
-    Loads the production model and preprocessing artifacts from the local '/app/artifacts'
-    directory inside the container.
-    """
-    global tf, ml_model, label_encoder, norm_stats
-    print("Loading model and artifacts from local directory...")
+class HealthResponse(BaseModel):
+    status: str
+    message: str
 
+@app.on_event("startup")
+async def load_artifacts():
+    """Load model artifacts on startup"""
+    global ml_model, label_encoder, norm_stats
+    
+    logger.info("Loading model and artifacts from local directory...")
+    
     try:
-        # Define the paths to the artifacts inside the container
-        # These paths correspond to the `COPY ./artifacts /app/artifacts` command in your Dockerfile
-        artifacts_dir = "./artifacts"
-        # model_path = os.path.join(artifacts_dir, "model","model.keras") # Path to the saved model folder
-        model_path = os.path.join(artifacts_dir,"model.keras")
+        # Define artifact paths relative to the working directory
+        artifacts_dir = "/app/artifacts"
+        model_path = os.path.join(artifacts_dir, "model.keras")
         le_path = os.path.join(artifacts_dir, "label_encoder.joblib")
         stats_path = os.path.join(artifacts_dir, "normalization_stats.joblib")
-
-        # Load the artifacts
-        # ml_model = load_model(model_path)
-        # Load the artifacts
-        ml_model = tf.keras.models.load_model(model_path)   # keras model
+        
+        # Log current working directory and check file existence
+        logger.info(f"Current working directory: {os.getcwd()}")
+        logger.info(f"Files in /app: {os.listdir('/app') if os.path.exists('/app') else 'N/A'}")
+        logger.info(f"Files in /app/artifacts: {os.listdir('/app/artifacts') if os.path.exists('/app/artifacts') else 'N/A'}")
+        
+        # Verify files exist
+        for path, name in [(model_path, "model"), (le_path, "label encoder"), (stats_path, "normalization stats")]:
+            if not os.path.exists(path):
+                raise FileNotFoundError(f"{name} file not found at {path}")
+            logger.info(f"{name} found at {path}")
+        
+        # Load artifacts
+        logger.info("Loading TensorFlow model...")
+        ml_model = tf.keras.models.load_model(model_path)
+        
+        logger.info("Loading label encoder...")
         label_encoder = joblib.load(le_path)
+        
+        logger.info("Loading normalization stats...")
         norm_stats = joblib.load(stats_path)
-
-        print("✅ Model and artifacts loaded successfully.")
-
+        
+        logger.info("Model and artifacts loaded successfully!")
+        logger.info(f"Model input shape: {ml_model.input_shape}")
+        logger.info(f"Available classes: {len(label_encoder.classes_)}")
+        logger.info(f"Classes: {list(label_encoder.classes_)}")
+        
     except Exception as e:
-        print(f"❌ An error occurred during artifact loading: {e}")
-        # This is a critical error, so we raise it to stop the server from starting improperly
+        logger.error(f"Error loading artifacts: {e}")
         raise RuntimeError(f"Could not load model or artifacts: {e}")
 
+@app.get("/", response_model=HealthResponse)
+async def root():
+    """Root endpoint"""
+    return {
+        "status": "success", 
+        "message": "Urban Sound Classification API is running! Visit /docs for API documentation."
+    }
 
-# --- 4. Define the Prediction Endpoint ---
-# The logic inside this function remains almost identical.
-@app.post("/predict/", response_model=PredictionResponse)
+@app.get("/health", response_model=HealthResponse)
+async def health_check():
+    """Health check endpoint"""
+    if ml_model is None or label_encoder is None or norm_stats is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Service unavailable - model artifacts not loaded"
+        )
+    return {
+        "status": "healthy",
+        "message": "All systems operational - ready for predictions"
+    }
+
+@app.get("/info")
+async def get_model_info():
+    """Get information about the loaded model"""
+    if ml_model is None or label_encoder is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Model not loaded"
+        )
+    
+    return {
+        "model_input_shape": str(ml_model.input_shape),
+        "available_classes": label_encoder.classes_.tolist(),
+        "sample_rate": config.SAMPLE_RATE,
+        "duration": config.DURATION,
+        "tensorflow_version": tf.__version__
+    }
+
+@app.post("/predict", response_model=PredictionResponse)
 async def predict(file: UploadFile = File(...)):
-    """
-    Accepts an audio file, preprocesses it, and returns the predicted class.
-    """
+    """Audio classification endpoint"""
+    
+    # Check if model is loaded
     if not ml_model or not label_encoder or not norm_stats:
-        raise HTTPException(status_code=503, detail="Model is not loaded yet. Please wait.")
-
-    # Read the uploaded audio file in memory
-    audio_bytes = await file.read()
-
+        raise HTTPException(
+            status_code=503,
+            detail="Model is not loaded yet. Please wait for initialization."
+        )
+    
+    # Validate file type
+    allowed_extensions = ('.wav', '.mp3', '.m4a', '.flac', '.ogg')
+    if not file.filename.lower().endswith(allowed_extensions):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file format. Supported formats: {', '.join(allowed_extensions)}"
+        )
+    
+    logger.info(f"Processing prediction for file: {file.filename}")
+    
     try:
-        # --- Preprocess the new audio data ---
-        # 1. Load audio data from in-memory bytes
-        audio, _ = librosa.load(io.BytesIO(audio_bytes), sr=config.SAMPLE_RATE, duration=config.DURATION)
+        # Read uploaded audio file
+        audio_bytes = await file.read()
+        logger.info(f"File size: {len(audio_bytes)} bytes")
         
-        # 2. Extract MFCCs
+        # Load audio data from memory
+        audio, _ = librosa.load(
+            io.BytesIO(audio_bytes), 
+            sr=config.SAMPLE_RATE, 
+            duration=config.DURATION
+        )
+        logger.info(f"Audio loaded: {len(audio)} samples at {config.SAMPLE_RATE}Hz")
+        
+        # Extract MFCC features
         mfccs = data_processing.extract_mfcc(audio)
+        logger.info(f"MFCC features extracted: shape {mfccs.shape}")
         
-        # 3. Normalize features using the loaded stats
+        # Normalize features
         mfccs_normalized = (mfccs - norm_stats['mean']) / (norm_stats['std'] + 1e-8)
         
-        # 4. Reshape for the model's input (batch, time_steps, n_mfcc, channels)
+        # Reshape for model input (batch, time_steps, n_mfcc, channels)
         mfccs_reshaped = mfccs_normalized[np.newaxis, ..., np.newaxis]
-
-        # --- Make Prediction ---
-        # Use the predict method of the loaded Keras model
-        prediction_vector = ml_model.predict(mfccs_reshaped)
+        logger.info(f"Input shape for model: {mfccs_reshaped.shape}")
         
-        # --- Post-process the Prediction ---
+        # Make prediction
+        prediction_vector = ml_model.predict(mfccs_reshaped, verbose=0)
+        
+        # Post-process prediction
         predicted_index = np.argmax(prediction_vector, axis=1)[0]
         predicted_class = label_encoder.inverse_transform([predicted_index])[0]
-
+        confidence = float(np.max(prediction_vector))
+        
+        logger.info(f"Prediction: {predicted_class} (confidence: {confidence:.4f})")
+        
         return {"predicted_class": predicted_class}
-
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to process file or make prediction: {e}")
+        logger.error(f"Prediction failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process file or make prediction: {str(e)}"
+        )
+
+
+
+# #v4 claude code
+# import os
+# import io
+# import tensorflow as tf
+# import joblib
+# import numpy as np
+# import librosa
+# from fastapi import FastAPI, UploadFile, File, HTTPException
+# from fastapi.middleware.cors import CORSMiddleware
+# from pydantic import BaseModel
+# import logging
+
+# # Import custom modules
+# import config
+# import data_processing
+
+# # Configure logging
+# logging.basicConfig(level=logging.INFO)
+# logger = logging.getLogger(__name__)
+
+# # FastAPI app instance
+# app = FastAPI(
+#     title="Urban Sound Classification API",
+#     description="Audio classification API for Urban Sound dataset",
+#     version="1.0.0",
+#     docs_url="/docs",
+#     redoc_url="/redoc"
+# )
+
+# # Add CORS middleware for web client access
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+# # Global variables
+# ml_model = None
+# label_encoder = None
+# norm_stats = None
+
+# # Response models
+# class PredictionResponse(BaseModel):
+#     predicted_class: str
+
+# class HealthResponse(BaseModel):
+#     status: str
+#     message: str
+
+# @app.on_event("startup")
+# async def load_artifacts():
+#     """Load model artifacts on startup"""
+#     global ml_model, label_encoder, norm_stats
+    
+#     logger.info("🚀 Loading model and artifacts from local directory...")
+    
+#     try:
+#         # Define artifact paths
+#         artifacts_dir = "./artifacts"
+#         model_path = os.path.join(artifacts_dir, "model.keras")
+#         le_path = os.path.join(artifacts_dir, "label_encoder.joblib")
+#         stats_path = os.path.join(artifacts_dir, "normalization_stats.joblib")
+        
+#         # Verify files exist
+#         for path, name in [(model_path, "model"), (le_path, "label encoder"), (stats_path, "normalization stats")]:
+#             if not os.path.exists(path):
+#                 raise FileNotFoundError(f"{name} file not found at {path}")
+        
+#         # Load artifacts
+#         ml_model = tf.keras.models.load_model(model_path)
+#         label_encoder = joblib.load(le_path)
+#         norm_stats = joblib.load(stats_path)
+        
+#         logger.info("✅ Model and artifacts loaded successfully!")
+#         logger.info(f"Model input shape: {ml_model.input_shape}")
+#         logger.info(f"Available classes: {len(label_encoder.classes_)}")
+        
+#     except Exception as e:
+#         logger.error(f"❌ Error loading artifacts: {e}")
+#         raise RuntimeError(f"Could not load model or artifacts: {e}")
+
+# @app.get("/", response_model=HealthResponse)
+# async def root():
+#     """Root endpoint"""
+#     return {
+#         "status": "success", 
+#         "message": "Urban Sound Classification API is running! Visit /docs for API documentation."
+#     }
+
+# @app.get("/health", response_model=HealthResponse)
+# async def health_check():
+#     """Health check endpoint for monitoring"""
+#     if ml_model is None or label_encoder is None or norm_stats is None:
+#         raise HTTPException(
+#             status_code=503,
+#             detail="Service unavailable - model artifacts not loaded"
+#         )
+#     return {
+#         "status": "healthy",
+#         "message": "All systems operational - ready for predictions"
+#     }
+
+# @app.get("/info")
+# async def get_model_info():
+#     """Get information about the loaded model"""
+#     if ml_model is None or label_encoder is None:
+#         raise HTTPException(
+#             status_code=503,
+#             detail="Model not loaded"
+#         )
+    
+#     return {
+#         "model_input_shape": str(ml_model.input_shape),
+#         "available_classes": label_encoder.classes_.tolist(),
+#         "sample_rate": config.SAMPLE_RATE,
+#         "duration": config.DURATION
+#     }
+
+# @app.post("/predict", response_model=PredictionResponse)
+# async def predict(file: UploadFile = File(...)):
+#     """
+#     Audio classification endpoint
+    
+#     Accepts audio files and returns predicted urban sound class
+#     """
+#     # Check if model is loaded
+#     if not ml_model or not label_encoder or not norm_stats:
+#         raise HTTPException(
+#             status_code=503,
+#             detail="Model is not loaded yet. Please wait for initialization."
+#         )
+    
+#     # Validate file type
+#     allowed_extensions = ('.wav', '.mp3', '.m4a', '.flac', '.ogg')
+#     if not file.filename.lower().endswith(allowed_extensions):
+#         raise HTTPException(
+#             status_code=400,
+#             detail=f"Invalid file format. Supported formats: {', '.join(allowed_extensions)}"
+#         )
+    
+#     # Log prediction request
+#     logger.info(f"Processing prediction for file: {file.filename}")
+    
+#     try:
+#         # Read uploaded audio file
+#         audio_bytes = await file.read()
+#         logger.info(f"File size: {len(audio_bytes)} bytes")
+        
+#         # Load audio data from memory
+#         audio, _ = librosa.load(
+#             io.BytesIO(audio_bytes), 
+#             sr=config.SAMPLE_RATE, 
+#             duration=config.DURATION
+#         )
+#         logger.info(f"Audio loaded: {len(audio)} samples at {config.SAMPLE_RATE}Hz")
+        
+#         # Extract MFCC features
+#         mfccs = data_processing.extract_mfcc(audio)
+#         logger.info(f"MFCC features extracted: shape {mfccs.shape}")
+        
+#         # Normalize features
+#         mfccs_normalized = (mfccs - norm_stats['mean']) / (norm_stats['std'] + 1e-8)
+        
+#         # Reshape for model input (batch, time_steps, n_mfcc, channels)
+#         mfccs_reshaped = mfccs_normalized[np.newaxis, ..., np.newaxis]
+#         logger.info(f"Input shape for model: {mfccs_reshaped.shape}")
+        
+#         # Make prediction
+#         prediction_vector = ml_model.predict(mfccs_reshaped, verbose=0)
+        
+#         # Post-process prediction
+#         predicted_index = np.argmax(prediction_vector, axis=1)[0]
+#         predicted_class = label_encoder.inverse_transform([predicted_index])[0]
+#         confidence = float(np.max(prediction_vector))
+        
+#         logger.info(f"Prediction: {predicted_class} (confidence: {confidence:.4f})")
+        
+#         return {"predicted_class": predicted_class}
+        
+#     except Exception as e:
+#         logger.error(f"Prediction failed: {str(e)}")
+#         raise HTTPException(
+#             status_code=500,
+#             detail=f"Failed to process file or make prediction: {str(e)}"
+#         )
+# #v3
+# import os
+# import io
+# import tensorflow
+# import joblib
+# import numpy as np
+# import librosa # You'll need this for audio processing
+# from fastapi import FastAPI, UploadFile, File, HTTPException
+# from pydantic import BaseModel
+# # --- CHANGE 1: Import the Keras load_model function ---
+# import tensorflow as tf
+
+# # --- CHANGE 2: MLflow imports are no longer needed ---
+# # from mlflow.tracking import MlflowClient
+# # from mlflow.exceptions import MlflowException
+# # import mlflow
+
+# # --- Custom Module Imports ---
+# # This remains the same
+# import config
+# import data_processing
+
+# # --- Configuration ---
+# # These are no longer needed as we load directly from a local folder
+# # REGISTERED_MODEL_NAME = "AudioClassifier"
+# # MODEL_ALIAS = "Production"
+
+# # --- 1. Define Application and Global Variables ---
+# app = FastAPI(title="Audio Classification API")
+
+# ml_model = None
+# label_encoder = None
+# norm_stats = None
+
+# # --- 2. Define Request/Response Models ---
+# # This remains the same
+# class PredictionResponse(BaseModel):
+#     predicted_class: str
+
+# # --- 3. Implement a Startup Event to Load the Model ---
+# # This entire function is replaced to load artifacts locally.
+# @app.on_event("startup")
+# def load_artifacts():
+#     """
+#     Loads the production model and preprocessing artifacts from the local '/app/artifacts'
+#     directory inside the container.
+#     """
+#     global tf, ml_model, label_encoder, norm_stats
+#     print("Loading model and artifacts from local directory...")
+
+#     try:
+#         # Define the paths to the artifacts inside the container
+#         # These paths correspond to the `COPY ./artifacts /app/artifacts` command in your Dockerfile
+#         artifacts_dir = "./artifacts"
+#         # model_path = os.path.join(artifacts_dir, "model","model.keras") # Path to the saved model folder
+#         model_path = os.path.join(artifacts_dir,"model.keras")
+#         le_path = os.path.join(artifacts_dir, "label_encoder.joblib")
+#         stats_path = os.path.join(artifacts_dir, "normalization_stats.joblib")
+
+#         # Load the artifacts
+#         # ml_model = load_model(model_path)
+#         # Load the artifacts
+#         ml_model = tf.keras.models.load_model(model_path)   # keras model
+#         label_encoder = joblib.load(le_path)
+#         norm_stats = joblib.load(stats_path)
+
+#         print("✅ Model and artifacts loaded successfully.")
+
+#     except Exception as e:
+#         print(f"❌ An error occurred during artifact loading: {e}")
+#         # This is a critical error, so we raise it to stop the server from starting improperly
+#         raise RuntimeError(f"Could not load model or artifacts: {e}")
+
+
+# # --- 4. Define the Prediction Endpoint ---
+# # The logic inside this function remains almost identical.
+# @app.post("/predict/", response_model=PredictionResponse)
+# async def predict(file: UploadFile = File(...)):
+#     """
+#     Accepts an audio file, preprocesses it, and returns the predicted class.
+#     """
+#     if not ml_model or not label_encoder or not norm_stats:
+#         raise HTTPException(status_code=503, detail="Model is not loaded yet. Please wait.")
+
+#     # Read the uploaded audio file in memory
+#     audio_bytes = await file.read()
+
+#     try:
+#         # --- Preprocess the new audio data ---
+#         # 1. Load audio data from in-memory bytes
+#         audio, _ = librosa.load(io.BytesIO(audio_bytes), sr=config.SAMPLE_RATE, duration=config.DURATION)
+        
+#         # 2. Extract MFCCs
+#         mfccs = data_processing.extract_mfcc(audio)
+        
+#         # 3. Normalize features using the loaded stats
+#         mfccs_normalized = (mfccs - norm_stats['mean']) / (norm_stats['std'] + 1e-8)
+        
+#         # 4. Reshape for the model's input (batch, time_steps, n_mfcc, channels)
+#         mfccs_reshaped = mfccs_normalized[np.newaxis, ..., np.newaxis]
+
+#         # --- Make Prediction ---
+#         # Use the predict method of the loaded Keras model
+#         prediction_vector = ml_model.predict(mfccs_reshaped)
+        
+#         # --- Post-process the Prediction ---
+#         predicted_index = np.argmax(prediction_vector, axis=1)[0]
+#         predicted_class = label_encoder.inverse_transform([predicted_index])[0]
+
+#         return {"predicted_class": predicted_class}
+
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Failed to process file or make prediction: {e}")
 
 
 

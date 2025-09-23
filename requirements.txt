@@ -16,4 +16,5 @@ pandas
 joblib
 librosa
 pydantic
-
+soundfile
+numba

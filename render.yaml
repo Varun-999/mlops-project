@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: urbansound-classifier
+    env: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: TF_CPP_MIN_LOG_LEVEL
+        value: "2"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+    autoDeploy: true
+    scaling:
+      minInstances: 1
+      maxInstances: 3
+    disk:
+      name: urbansound-disk
+      sizeGB: 1
+      mountPath: /tmp
