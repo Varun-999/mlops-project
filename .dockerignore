@@ -20,6 +20,7 @@ Thumbs.db
 artifacts/*
 !artifacts/label_encoder.joblib
 !artifacts/normalization_stats.joblib
+!artifacts/model.keras
 !artifacts/model/model.keras
 # Ignore logs and temporary files
 __pycache__/
