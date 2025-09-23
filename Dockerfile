@@ -18,6 +18,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Create artifacts directory (empty for now)
 RUN mkdir -p /app/artifacts
 
+# Copy model artifacts (these will now be included from your repository)
+COPY ./artifacts/model.keras /app/artifacts/
+COPY ./artifacts/label_encoder.joblib /app/artifacts/
+COPY ./artifacts/normalization_stats.joblib /app/artifacts/
+
 # Copy source code
 COPY src/ /app/src/
 
