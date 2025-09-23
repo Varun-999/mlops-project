@@ -17,7 +17,7 @@ mlruns/
 .DS_Store
 Thumbs.db
 # Ignore artifacts except the ones explicitly copied in Dockerfile
-artifacts/*
+!artifacts/*
 !artifacts/label_encoder.joblib
 !artifacts/normalization_stats.joblib
 !artifacts/model.keras
