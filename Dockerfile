@@ -3,11 +3,11 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # # Install system dependencies for audio processing
-# RUN apt-get update && apt-get install -y \
-#     libsndfile1 \
-#     ffmpeg \
-#     libsndfile1-dev \
-#     && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    libsndfile1 \
+    ffmpeg \
+    libsndfile1-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file
 COPY requirements.txt .

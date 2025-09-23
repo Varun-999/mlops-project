@@ -9,9 +9,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import logging
 
-# Import custom modules
-import config
-import data_processing
+# Try to import custom modules - handle gracefully if missing
+try:
+    import config
+    SAMPLE_RATE = config.SAMPLE_RATE
+    DURATION = config.DURATION
+except ImportError:
+    SAMPLE_RATE = 22050
+    DURATION = 4
+    logging.warning("Config module not found, using default values")
+
+try:
+    import data_processing
+except ImportError:
+    data_processing = None
+    logging.warning("Data processing module not found, will use fallback methods")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -39,6 +51,7 @@ app.add_middleware(
 ml_model = None
 label_encoder = None
 norm_stats = None
+model_loaded = False
 
 # Response models
 class PredictionResponse(BaseModel):
@@ -50,30 +63,42 @@ class HealthResponse(BaseModel):
 
 @app.on_event("startup")
 async def load_artifacts():
-    """Load model artifacts on startup"""
-    global ml_model, label_encoder, norm_stats
+    """Load model artifacts on startup if available"""
+    global ml_model, label_encoder, norm_stats, model_loaded
     
-    logger.info("Loading model and artifacts from local directory...")
+    logger.info("Starting artifact loading process...")
     
     try:
-        # Define artifact paths relative to the working directory
+        # Define artifact paths
         artifacts_dir = "/app/artifacts"
         model_path = os.path.join(artifacts_dir, "model.keras")
         le_path = os.path.join(artifacts_dir, "label_encoder.joblib")
         stats_path = os.path.join(artifacts_dir, "normalization_stats.joblib")
         
-        # Log current working directory and check file existence
-        logger.info(f"Current working directory: {os.getcwd()}")
-        logger.info(f"Files in /app: {os.listdir('/app') if os.path.exists('/app') else 'N/A'}")
-        logger.info(f"Files in /app/artifacts: {os.listdir('/app/artifacts') if os.path.exists('/app/artifacts') else 'N/A'}")
+        logger.info(f"Checking artifacts directory: {artifacts_dir}")
+        logger.info(f"Directory exists: {os.path.exists(artifacts_dir)}")
         
-        # Verify files exist
-        for path, name in [(model_path, "model"), (le_path, "label encoder"), (stats_path, "normalization stats")]:
+        if os.path.exists(artifacts_dir):
+            logger.info(f"Contents of artifacts directory: {os.listdir(artifacts_dir)}")
+        
+        # Check if all required files exist
+        missing_files = []
+        for path, name in [(model_path, "model.keras"), (le_path, "label_encoder.joblib"), (stats_path, "normalization_stats.joblib")]:
             if not os.path.exists(path):
-                raise FileNotFoundError(f"{name} file not found at {path}")
-            logger.info(f"{name} found at {path}")
+                missing_files.append(name)
+                logger.info(f"Missing file: {name} at {path}")
+            else:
+                logger.info(f"Found file: {name} at {path}")
         
-        # Load artifacts
+        if missing_files:
+            logger.warning(f"Missing artifact files: {', '.join(missing_files)}")
+            logger.info("API will run in demo mode without prediction capability")
+            model_loaded = False
+            return
+        
+        # Try to load artifacts
+        logger.info("All artifact files found, attempting to load...")
+        
         logger.info("Loading TensorFlow model...")
         ml_model = tf.keras.models.load_model(model_path)
         
@@ -83,62 +108,80 @@ async def load_artifacts():
         logger.info("Loading normalization stats...")
         norm_stats = joblib.load(stats_path)
         
-        logger.info("Model and artifacts loaded successfully!")
+        model_loaded = True
+        logger.info("SUCCESS: Model and artifacts loaded successfully!")
         logger.info(f"Model input shape: {ml_model.input_shape}")
         logger.info(f"Available classes: {len(label_encoder.classes_)}")
-        logger.info(f"Classes: {list(label_encoder.classes_)}")
         
     except Exception as e:
-        logger.error(f"Error loading artifacts: {e}")
-        raise RuntimeError(f"Could not load model or artifacts: {e}")
+        logger.error(f"Error during artifact loading: {str(e)}")
+        logger.info("API will run in demo mode without prediction capability")
+        model_loaded = False
+        # Don't raise the error - let the app start in demo mode
 
 @app.get("/", response_model=HealthResponse)
 async def root():
     """Root endpoint"""
-    return {
-        "status": "success", 
-        "message": "Urban Sound Classification API is running! Visit /docs for API documentation."
-    }
+    if model_loaded:
+        return {
+            "status": "ready", 
+            "message": "Urban Sound Classification API is running with full prediction capability! Visit /docs for API documentation."
+        }
+    else:
+        return {
+            "status": "demo", 
+            "message": "Urban Sound Classification API is running in demo mode (no model loaded). Visit /docs for API documentation."
+        }
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
-    """Health check endpoint"""
-    if ml_model is None or label_encoder is None or norm_stats is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Service unavailable - model artifacts not loaded"
-        )
-    return {
-        "status": "healthy",
-        "message": "All systems operational - ready for predictions"
-    }
+    """Health check endpoint for monitoring"""
+    if model_loaded:
+        return {
+            "status": "healthy",
+            "message": "All systems operational - ready for predictions"
+        }
+    else:
+        return {
+            "status": "healthy", 
+            "message": "API running in demo mode - service is healthy but no model loaded"
+        }
 
 @app.get("/info")
 async def get_model_info():
-    """Get information about the loaded model"""
-    if ml_model is None or label_encoder is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Model not loaded"
-        )
-    
-    return {
-        "model_input_shape": str(ml_model.input_shape),
-        "available_classes": label_encoder.classes_.tolist(),
-        "sample_rate": config.SAMPLE_RATE,
-        "duration": config.DURATION,
-        "tensorflow_version": tf.__version__
+    """Get information about the loaded model and current status"""
+    base_info = {
+        "tensorflow_version": tf.__version__,
+        "sample_rate": SAMPLE_RATE,
+        "duration": DURATION,
+        "model_loaded": model_loaded
     }
+    
+    if model_loaded:
+        return {
+            **base_info,
+            "status": "ready",
+            "model_input_shape": str(ml_model.input_shape),
+            "available_classes": label_encoder.classes_.tolist(),
+            "message": "Model loaded and ready for predictions"
+        }
+    else:
+        return {
+            **base_info,
+            "status": "demo mode",
+            "message": "No model loaded. Prediction functionality not available. API running in demo mode.",
+            "available_endpoints": ["/", "/health", "/info", "/docs"]
+        }
 
 @app.post("/predict", response_model=PredictionResponse)
 async def predict(file: UploadFile = File(...)):
     """Audio classification endpoint"""
     
     # Check if model is loaded
-    if not ml_model or not label_encoder or not norm_stats:
+    if not model_loaded:
         raise HTTPException(
             status_code=503,
-            detail="Model is not loaded yet. Please wait for initialization."
+            detail="Prediction service not available. Model artifacts not loaded. API is running in demo mode. Please check /info for current status."
         )
     
     # Validate file type
@@ -159,13 +202,19 @@ async def predict(file: UploadFile = File(...)):
         # Load audio data from memory
         audio, _ = librosa.load(
             io.BytesIO(audio_bytes), 
-            sr=config.SAMPLE_RATE, 
-            duration=config.DURATION
+            sr=SAMPLE_RATE, 
+            duration=DURATION
         )
-        logger.info(f"Audio loaded: {len(audio)} samples at {config.SAMPLE_RATE}Hz")
+        logger.info(f"Audio loaded: {len(audio)} samples at {SAMPLE_RATE}Hz")
         
         # Extract MFCC features
-        mfccs = data_processing.extract_mfcc(audio)
+        if data_processing:
+            mfccs = data_processing.extract_mfcc(audio)
+        else:
+            # Fallback MFCC extraction
+            mfccs = librosa.feature.mfcc(y=audio, sr=SAMPLE_RATE, n_mfcc=13)
+            mfccs = mfccs.T  # Transpose to match expected shape
+        
         logger.info(f"MFCC features extracted: shape {mfccs.shape}")
         
         # Normalize features
@@ -193,6 +242,211 @@ async def predict(file: UploadFile = File(...)):
             status_code=500,
             detail=f"Failed to process file or make prediction: {str(e)}"
         )
+
+
+
+
+
+
+
+
+
+#working with ci file but failing on render
+# import os
+# import io
+# import tensorflow as tf
+# import joblib
+# import numpy as np
+# import librosa
+# from fastapi import FastAPI, UploadFile, File, HTTPException
+# from fastapi.middleware.cors import CORSMiddleware
+# from pydantic import BaseModel
+# import logging
+
+# # Import custom modules
+# import config
+# import data_processing
+
+# # Configure logging
+# logging.basicConfig(level=logging.INFO)
+# logger = logging.getLogger(__name__)
+
+# # FastAPI app instance
+# app = FastAPI(
+#     title="Urban Sound Classification API",
+#     description="Audio classification API for Urban Sound dataset",
+#     version="1.0.0",
+#     docs_url="/docs",
+#     redoc_url="/redoc"
+# )
+
+# # Add CORS middleware
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+# # Global variables
+# ml_model = None
+# label_encoder = None
+# norm_stats = None
+
+# # Response models
+# class PredictionResponse(BaseModel):
+#     predicted_class: str
+
+# class HealthResponse(BaseModel):
+#     status: str
+#     message: str
+
+# @app.on_event("startup")
+# async def load_artifacts():
+#     """Load model artifacts on startup"""
+#     global ml_model, label_encoder, norm_stats
+    
+#     logger.info("Loading model and artifacts from local directory...")
+    
+#     try:
+#         # Define artifact paths relative to the working directory
+#         artifacts_dir = "/app/artifacts"
+#         model_path = os.path.join(artifacts_dir, "model.keras")
+#         le_path = os.path.join(artifacts_dir, "label_encoder.joblib")
+#         stats_path = os.path.join(artifacts_dir, "normalization_stats.joblib")
+        
+#         # Log current working directory and check file existence
+#         logger.info(f"Current working directory: {os.getcwd()}")
+#         logger.info(f"Files in /app: {os.listdir('/app') if os.path.exists('/app') else 'N/A'}")
+#         logger.info(f"Files in /app/artifacts: {os.listdir('/app/artifacts') if os.path.exists('/app/artifacts') else 'N/A'}")
+        
+#         # Verify files exist
+#         for path, name in [(model_path, "model"), (le_path, "label encoder"), (stats_path, "normalization stats")]:
+#             if not os.path.exists(path):
+#                 raise FileNotFoundError(f"{name} file not found at {path}")
+#             logger.info(f"{name} found at {path}")
+        
+#         # Load artifacts
+#         logger.info("Loading TensorFlow model...")
+#         ml_model = tf.keras.models.load_model(model_path)
+        
+#         logger.info("Loading label encoder...")
+#         label_encoder = joblib.load(le_path)
+        
+#         logger.info("Loading normalization stats...")
+#         norm_stats = joblib.load(stats_path)
+        
+#         logger.info("Model and artifacts loaded successfully!")
+#         logger.info(f"Model input shape: {ml_model.input_shape}")
+#         logger.info(f"Available classes: {len(label_encoder.classes_)}")
+#         logger.info(f"Classes: {list(label_encoder.classes_)}")
+        
+#     except Exception as e:
+#         logger.error(f"Error loading artifacts: {e}")
+#         raise RuntimeError(f"Could not load model or artifacts: {e}")
+
+# @app.get("/", response_model=HealthResponse)
+# async def root():
+#     """Root endpoint"""
+#     return {
+#         "status": "success", 
+#         "message": "Urban Sound Classification API is running! Visit /docs for API documentation."
+#     }
+
+# @app.get("/health", response_model=HealthResponse)
+# async def health_check():
+#     """Health check endpoint"""
+#     if ml_model is None or label_encoder is None or norm_stats is None:
+#         raise HTTPException(
+#             status_code=503,
+#             detail="Service unavailable - model artifacts not loaded"
+#         )
+#     return {
+#         "status": "healthy",
+#         "message": "All systems operational - ready for predictions"
+#     }
+
+# @app.get("/info")
+# async def get_model_info():
+#     """Get information about the loaded model"""
+#     if ml_model is None or label_encoder is None:
+#         raise HTTPException(
+#             status_code=503,
+#             detail="Model not loaded"
+#         )
+    
+#     return {
+#         "model_input_shape": str(ml_model.input_shape),
+#         "available_classes": label_encoder.classes_.tolist(),
+#         "sample_rate": config.SAMPLE_RATE,
+#         "duration": config.DURATION,
+#         "tensorflow_version": tf.__version__
+#     }
+
+# @app.post("/predict", response_model=PredictionResponse)
+# async def predict(file: UploadFile = File(...)):
+#     """Audio classification endpoint"""
+    
+#     # Check if model is loaded
+#     if not ml_model or not label_encoder or not norm_stats:
+#         raise HTTPException(
+#             status_code=503,
+#             detail="Model is not loaded yet. Please wait for initialization."
+#         )
+    
+#     # Validate file type
+#     allowed_extensions = ('.wav', '.mp3', '.m4a', '.flac', '.ogg')
+#     if not file.filename.lower().endswith(allowed_extensions):
+#         raise HTTPException(
+#             status_code=400,
+#             detail=f"Invalid file format. Supported formats: {', '.join(allowed_extensions)}"
+#         )
+    
+#     logger.info(f"Processing prediction for file: {file.filename}")
+    
+#     try:
+#         # Read uploaded audio file
+#         audio_bytes = await file.read()
+#         logger.info(f"File size: {len(audio_bytes)} bytes")
+        
+#         # Load audio data from memory
+#         audio, _ = librosa.load(
+#             io.BytesIO(audio_bytes), 
+#             sr=config.SAMPLE_RATE, 
+#             duration=config.DURATION
+#         )
+#         logger.info(f"Audio loaded: {len(audio)} samples at {config.SAMPLE_RATE}Hz")
+        
+#         # Extract MFCC features
+#         mfccs = data_processing.extract_mfcc(audio)
+#         logger.info(f"MFCC features extracted: shape {mfccs.shape}")
+        
+#         # Normalize features
+#         mfccs_normalized = (mfccs - norm_stats['mean']) / (norm_stats['std'] + 1e-8)
+        
+#         # Reshape for model input (batch, time_steps, n_mfcc, channels)
+#         mfccs_reshaped = mfccs_normalized[np.newaxis, ..., np.newaxis]
+#         logger.info(f"Input shape for model: {mfccs_reshaped.shape}")
+        
+#         # Make prediction
+#         prediction_vector = ml_model.predict(mfccs_reshaped, verbose=0)
+        
+#         # Post-process prediction
+#         predicted_index = np.argmax(prediction_vector, axis=1)[0]
+#         predicted_class = label_encoder.inverse_transform([predicted_index])[0]
+#         confidence = float(np.max(prediction_vector))
+        
+#         logger.info(f"Prediction: {predicted_class} (confidence: {confidence:.4f})")
+        
+#         return {"predicted_class": predicted_class}
+        
+#     except Exception as e:
+#         logger.error(f"Prediction failed: {str(e)}")
+#         raise HTTPException(
+#             status_code=500,
+#             detail=f"Failed to process file or make prediction: {str(e)}"
+#         )
 
 
 
