@@ -21,9 +21,9 @@ env/
 # -------------------
 # Ignore model files, encoders, and scalers saved locally.
 # These are tracked by MLflow and should not be in Git.
-*.joblib
+#*.joblib
 *.h5
-*.keras
+#*.keras
 
 *.json
 dvc-sound-project-*.json
