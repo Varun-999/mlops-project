@@ -62,7 +62,7 @@ Other dependencies are specified in the `requirements.txt` and handled by the Do
 ### Installing
 
 1. Clone the repository and navigate to the project directory.
-2. Place UrbanSound8K dataset and metadata CSV in the appropriate `dataset/` directory.
+2. Place UrbanSound8K dataset and metadata CSV in the appropriate `data/` directory.
 3. Copy provided `docker-compose.yml` and `Dockerfile` templates.
 4. Build and start all services (API, MLflow server, training jobs):
 ```
