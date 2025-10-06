@@ -160,14 +160,12 @@ Host volumes are used for model artifacts, DVC-managed data, and MLflow runs, en
 
 ## ✍️ Authors <a name = "authors"></a>
 
-- [Your Name/Handle] - Idea \& Initial work
+- P.Saivarun - Idea \& Initial work
 
 See also the list of [contributors](https://github.com/kylelobo/The-Documentation-Compendium/contributors) who participated in this project.
 
 ## 🎉 Acknowledgements <a name = "acknowledgement"></a>
 
-- Hat tip to anyone whose code was used
-- Inspiration from MLOps best practices and the UrbanSound8K dataset project
 - References: FastAPI, Docker, MLflow, DVC documentation
 
 ***
