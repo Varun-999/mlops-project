@@ -28,7 +28,7 @@ This repository provides a robust MLOps workflow for UrbanSound8K audio classifi
 - Inference API (FastAPI)
 - Containerization (Docker)
 - Data versioning (DVC)
-- CI/CD automation (GitHub Actions)
+- CI/CD automation (GitHub Actions, Google cloud run)
 
 All steps are containerized for reproducibility and easy deployment.
 
