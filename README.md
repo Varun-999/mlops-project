@@ -34,7 +34,7 @@ All steps are containerized for reproducibility and easy deployment.
 
 ---
 <!-- ![Project Overview](Architectture diagram.png) -->
-![Architecture Diagram](FtoL/Architecture_diagram.png)
+![Architecture Diagram](images/Architecture_diagram.png)
 <!-- <img src="Architecture diagram.png" alt="Project Overview" width="600"/> -->
 ---
 
