@@ -34,7 +34,8 @@ All steps are containerized for reproducibility and easy deployment.
 
 ---
 <!-- ![Project Overview](Architectture diagram.png) -->
-![Architecture Diagram](https://github.com/Varun-999/mlops-project/blob/main/images/Architecture_diagram.png)
+<img src="https://github.com/Varun-999/mlops-project/blob/main/images/Architecture_diagram.png" alt="Project Overview" width="600"/>
+<!-- ![Architecture Diagram](https://github.com/Varun-999/mlops-project/blob/main/images/Architecture_diagram.png) -->
 <!-- <img src="Architecture diagram.png" alt="Project Overview" width="600"/> -->
 ---
 
