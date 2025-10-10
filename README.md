@@ -155,5 +155,3 @@ flake8 .
 - References: FastAPI, Docker, MLflow, DVC documentation
 
 ---
-
-Replace `[Your Name/Handle]` with the actual author for proper credit. For more details, see [src/main.py](src/main.py), [src/train.py](src/train.py), [src/predict.py](src/predict.py), [src/config.py](src/config.py), and [src/data_processing.py](src/data_processing.py).
