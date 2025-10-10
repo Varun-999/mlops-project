@@ -34,7 +34,8 @@ All steps are containerized for reproducibility and easy deployment.
 
 ---
 <!-- ![Project Overview](Architectture diagram.png) -->
-<img src="Architecture diagram.png" alt="Project Overview" width="600"/>
+![Architecture diagram](Architecture_diagram.png)
+<!-- <img src="Architecture diagram.png" alt="Project Overview" width="600"/> -->
 ---
 
 ## 🏁 Getting Started <a name="getting_started"></a>
