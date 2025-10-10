@@ -31,7 +31,10 @@ This repository provides a robust MLOps workflow for UrbanSound8K audio classifi
 - CI/CD automation (GitHub Actions)
 
 All steps are containerized for reproducibility and easy deployment.
-![Project Overview](Gemini_Generated_Image_fwyp8fwyp8fwyp8f.png)
+
+---
+<!-- ![Project Overview](Architectture diagram.png) -->
+<img src="Architecture diagram.png" alt="Project Overview" width="600"/>
 ---
 
 ## 🏁 Getting Started <a name="getting_started"></a>
