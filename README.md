@@ -148,7 +148,11 @@ flake8 .
 - [GitHub Actions](https://github.com/features/actions) - CI/CD Pipeline
 
 ---
+## Deployed API Link:
+https://urbansound-api-205836669252.asia-south1.run.app
+Append /docs to the above link to access the api
 
+---
 ## ✍️ Authors <a name="authors"></a>
 
 - P.Saivarun - Idea & Initial work
